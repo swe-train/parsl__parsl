@@ -24,9 +24,7 @@ class PolledExecutorFacade:
         now = time.time()
         previous_status = self.executor._poller_mutable_status
 
-        if now >= self._executor._last_poll_time + self._executor.status_polling_interval:
-            self._executor._poller_mutable_status = self._executor.status()
-            self._executor._last_poll_time = now
+        self._executor._refresh_poll_mutable_status_if_time(now)
 
         if previous_status != self.executor._poller_mutable_status:
             # short circuit the case where the two objects are identical so
