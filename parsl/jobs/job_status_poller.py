@@ -18,16 +18,15 @@ logger = logging.getLogger(__name__)
 class PolledExecutorFacade:
     def __init__(self, executor: BlockProviderExecutor, monitoring: Optional["parsl.monitoring.radios.MonitoringRadio"] = None):
         self._executor = executor
-        self._last_poll_time = 0.0
         self._monitoring = monitoring
 
     def poll(self) -> None:
         now = time.time()
         previous_status = self.executor._poller_mutable_status
 
-        if now >= self._last_poll_time + self._executor.status_polling_interval:
+        if now >= self._executor._last_poll_time + self._executor.status_polling_interval:
             self._executor._poller_mutable_status = self._executor.status()
-            self._last_poll_time = now
+            self._executor._last_poll_time = now
 
         if previous_status != self.executor._poller_mutable_status:
             # short circuit the case where the two objects are identical so
