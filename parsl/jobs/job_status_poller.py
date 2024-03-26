@@ -1,6 +1,5 @@
 import logging
 import parsl
-import time
 from typing import Dict, List, Sequence, Optional, Union
 
 from parsl.jobs.states import JobStatus, JobState
@@ -21,10 +20,9 @@ class PolledExecutorFacade:
         self._monitoring = monitoring
 
     def poll(self) -> None:
-        now = time.time()
         previous_status = self.executor._poller_mutable_status
 
-        self._executor._refresh_poll_mutable_status_if_time(now)
+        self._executor._refresh_poll_mutable_status_if_time()
 
         if previous_status != self.executor._poller_mutable_status:
             # short circuit the case where the two objects are identical so
