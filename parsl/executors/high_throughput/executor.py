@@ -35,7 +35,7 @@ from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
-
+from parsl.monitoring.radios import RadioConfig, HTEXRadio
 from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -257,11 +257,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 monitoring_radio: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+
         self.label = label
         self.worker_debug = worker_debug
         self.storage_access = storage_access
@@ -308,6 +310,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.run_id = None  # set to the correct run_id in dfk
         self.hub_address = None  # set to the correct hub address in dfk
         self.hub_port = None  # set to the correct hub port in dfk
+
+        if monitoring_radio is not None:
+            self.monitoring_radio = monitoring_radio
+        else:
+            self.monitoring_radio = HTEXRadio()
+
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[Process] = None
@@ -334,8 +342,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
-
-    radio_mode = "htex"
 
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(

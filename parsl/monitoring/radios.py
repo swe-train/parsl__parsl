@@ -22,6 +22,31 @@ class MonitoringRadioSender(metaclass=ABCMeta):
         pass
 
 
+class RadioConfig(metaclass=ABCMeta):
+    """Base class for radio plugin configuration.
+    """
+    # mode: str
+    # monitoring_hub_url: str
+
+    @abstractmethod
+    def create_sender(self, *, source_id: int, run_dir: str) -> MonitoringRadioSender:
+        pass
+
+
+class UDPRadio(RadioConfig):
+    ip: str
+    port: int
+    # this needs to be initialised by magic...
+
+    def create_sender(self, *, source_id: int, run_dir: str) -> MonitoringRadioSender:
+        return UDPRadioSender(self.ip, self.port, source_id)
+
+
+class HTEXRadio(RadioConfig):
+    def create_sender(self, *, source_id: int, run_dir: str) -> MonitoringRadioSender:
+        return HTEXRadioSender(source_id=source_id)
+
+
 class FilesystemRadioSender(MonitoringRadioSender):
     """A MonitoringRadioSender that sends messages over a shared filesystem.
 
@@ -69,18 +94,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
 
 class HTEXRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
-        """
-        Parameters
-        ----------
-
-        monitoring_url : str
-            URL of the form <scheme>://<IP>:<PORT>
-        source_id : str
-            String identifier of the source
-        timeout : int
-            timeout, default=10s
-        """
+    def __init__(self, source_id: int):
         self.source_id = source_id
         logger.info("htex-based monitoring channel initialising")
 
@@ -123,11 +137,12 @@ class HTEXRadioSender(MonitoringRadioSender):
 
 class UDPRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+    def __init__(self, ip: str, port: int, source_id: int, timeout: int = 10) -> None:
         """
         Parameters
         ----------
 
+        XXX TODO
         monitoring_url : str
             URL of the form <scheme>://<IP>:<PORT>
         source_id : str
@@ -135,14 +150,10 @@ class UDPRadioSender(MonitoringRadioSender):
         timeout : int
             timeout, default=10s
         """
-        self.monitoring_url = monitoring_url
         self.sock_timeout = timeout
         self.source_id = source_id
-        try:
-            self.scheme, self.ip, port = (x.strip('/') for x in monitoring_url.split(':'))
-            self.port = int(port)
-        except Exception:
-            raise Exception("Failed to parse monitoring url: {}".format(monitoring_url))
+        self.ip = ip
+        self.port = port
 
         self.sock = socket.socket(socket.AF_INET,
                                   socket.SOCK_DGRAM,

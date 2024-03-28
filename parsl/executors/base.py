@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, Optional, List
 from typing_extensions import Literal, Self
 
 from parsl.jobs.states import JobStatus
+from parsl.monitoring.radios import RadioConfig, UDPRadio
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -17,15 +18,13 @@ class ParslExecutor(metaclass=ABCMeta):
     no arguments and re-raises any thrown exception.
 
     In addition to the listed methods, a ParslExecutor instance must always
-    have a member field:
+    have these member fields:
 
        label: str - a human readable label for the executor, unique
               with respect to other executors.
 
-    Per-executor monitoring behaviour can be influenced by exposing:
-
-       radio_mode: str - a string describing which radio mode should be used to
-              send task resource data back to the submit side.
+       monitoring_radio: RadioConfig describing how tasks on this executor
+              should report task resource status
 
     An executor may optionally expose:
 
@@ -43,7 +42,10 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str = "undefined"
-    radio_mode: str = "udp"
+
+    def __init__(self) -> None:
+        self.monitoring_radio: RadioConfig
+        self.monitoring_radio = UDPRadio()
 
     def __enter__(self) -> Self:
         return self

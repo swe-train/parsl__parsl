@@ -9,7 +9,7 @@ from multiprocessing import Event
 from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MonitoringRadioSender, UDPRadioSender, HTEXRadioSender, FilesystemRadioSender
+from parsl.monitoring.radios import MonitoringRadioSender, RadioConfig
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,10 @@ def monitor_wrapper(*,
                     kwargs: Dict,     # per invocation
                     x_try_id: int,    # per invocation
                     x_task_id: int,   # per invocation
-                    monitoring_hub_url: str,   # per workflow
+                    radio_config: RadioConfig,   # per executor
                     run_id: str,      # per workflow
                     logging_level: int,  # per workflow
                     sleep_dur: float,  # per workflow
-                    radio_mode: str,   # per executor
                     monitor_resources: bool,  # per workflow
                     run_dir: str) -> Tuple[Callable, Sequence, Dict]:
     """Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
@@ -39,9 +38,8 @@ def monitor_wrapper(*,
         # Send first message to monitoring router
         send_first_message(try_id,
                            task_id,
-                           monitoring_hub_url,
+                           radio_config,
                            run_id,
-                           radio_mode,
                            run_dir)
 
         if monitor_resources and sleep_dur > 0:
@@ -50,9 +48,8 @@ def monitor_wrapper(*,
                              args=(os.getpid(),
                                    try_id,
                                    task_id,
-                                   monitoring_hub_url,
+                                   radio_config,
                                    run_id,
-                                   radio_mode,
                                    logging_level,
                                    sleep_dur,
                                    run_dir,
@@ -85,9 +82,9 @@ def monitor_wrapper(*,
 
             send_last_message(try_id,
                               task_id,
-                              monitoring_hub_url,
+                              radio_config,
                               run_id,
-                              radio_mode, run_dir)
+                              run_dir)
 
     new_kwargs = kwargs.copy()
     new_kwargs['_parsl_monitoring_task_id'] = x_task_id
@@ -96,49 +93,42 @@ def monitor_wrapper(*,
     return (wrapped, args, new_kwargs)
 
 
-def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadioSender:
+def get_radio(radio_config: RadioConfig, task_id: int, run_dir: str) -> MonitoringRadioSender:
+
     radio: MonitoringRadioSender
-    if radio_mode == "udp":
-        radio = UDPRadioSender(monitoring_hub_url,
-                               source_id=task_id)
-    elif radio_mode == "htex":
-        radio = HTEXRadioSender(monitoring_hub_url,
-                                source_id=task_id)
-    elif radio_mode == "filesystem":
-        radio = FilesystemRadioSender(monitoring_url=monitoring_hub_url,
-                                      source_id=task_id, run_dir=run_dir)
-    else:
-        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+
+    radio = radio_config.create_sender(source_id=task_id, run_dir=run_dir)
+
     return radio
 
 
 @wrap_with_logs
 def send_first_message(try_id: int,
                        task_id: int,
-                       monitoring_hub_url: str,
-                       run_id: str, radio_mode: str, run_dir: str) -> None:
-    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
-                            radio_mode, run_dir, False)
+                       radio_config: RadioConfig,
+                       run_id: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, radio_config, run_id,
+                            run_dir, False)
 
 
 @wrap_with_logs
 def send_last_message(try_id: int,
                       task_id: int,
-                      monitoring_hub_url: str,
-                      run_id: str, radio_mode: str, run_dir: str) -> None:
-    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
-                            radio_mode, run_dir, True)
+                      radio_config: RadioConfig,
+                      run_id: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, radio_config, run_id,
+                            run_dir, True)
 
 
 def send_first_last_message(try_id: int,
                             task_id: int,
-                            monitoring_hub_url: str,
-                            run_id: str, radio_mode: str, run_dir: str,
+                            radio_config: RadioConfig,
+                            run_id: str, run_dir: str,
                             is_last: bool) -> None:
     import platform
     import os
 
-    radio = get_radio(radio_mode, monitoring_hub_url, task_id, run_dir)
+    radio = get_radio(radio_config, task_id, run_dir)
 
     msg = (MessageType.RESOURCE_INFO,
            {'run_id': run_id,
@@ -158,9 +148,8 @@ def send_first_last_message(try_id: int,
 def monitor(pid: int,
             try_id: int,
             task_id: int,
-            monitoring_hub_url: str,
+            radio_config: RadioConfig,
             run_id: str,
-            radio_mode: str,
             logging_level: int,
             sleep_dur: float,
             run_dir: str,
@@ -183,7 +172,7 @@ def monitor(pid: int,
 
     setproctitle("parsl: task resource monitor")
 
-    radio = get_radio(radio_mode, monitoring_hub_url, task_id, run_dir)
+    radio = get_radio(radio_config, task_id, run_dir)
 
     logging.debug("start of monitor")
 

@@ -714,16 +714,21 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
+
+            # this is only for UDP... it should be some kind of config-specific initialisation
+            # which could also start threads, and this should be one-shot
+            executor.monitoring_radio.ip = self.monitoring.hub_address  # type: ignore[attr-defined]
+            executor.monitoring_radio.port = self.monitoring.udp_port  # type: ignore[attr-defined]
+
             (function, args, kwargs) = monitor_wrapper(f=function,
                                                        args=args,
                                                        kwargs=kwargs,
                                                        x_try_id=try_id,
                                                        x_task_id=task_id,
-                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       radio_config=executor.monitoring_radio,
                                                        run_id=self.run_id,
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
-                                                       radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 

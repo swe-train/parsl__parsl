@@ -79,6 +79,9 @@ class MonitoringHub(RepresentationMixin):
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
+        radio_config: RadioConfig
+             The monitoring radio to be used to send monitoring information from workers back to the
+             submit side.
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging of information from the worker side.
              This will include environment information such as start time, hostname and block id,
@@ -203,7 +206,22 @@ class MonitoringHub(RepresentationMixin):
 
         udp_port, zmq_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+        self.udp_port = udp_port
+        self.zmq_port = zmq_port
+
+        # need to initialize radio configs, perhaps first time a radio config is used
+        # in each executor? (can't do that at startup because executor list is dynamic,
+        # don't know all the executors till later)
+        # self.radio_config.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+        # How can this config be populated properly?
+        # There's a UDP port chosen right now by the monitoring router and
+        # sent back a line above...
+        # What does that look like for other radios? htexradio has no specific config at all,
+        # filesystem radio has a path (that should have been created?) for config, and a loop
+        # that needs to be running, started in this start method.
+        # so something like... radio_config.receive() generates the appropriate receiver object?
+        # which has a shutdown method on it for later. and also updates radio_config itself so
+        # it has the right info to send across the wire? or some state driving like that?
 
         context = zmq.Context()
         self.dfk_channel_timeout = 10000  # in milliseconds
