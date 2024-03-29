@@ -16,14 +16,14 @@ _db_manager_excepts: Optional[Exception]
 logger = logging.getLogger(__name__)
 
 
-class MonitoringRadio(metaclass=ABCMeta):
+class MonitoringRadioSender(metaclass=ABCMeta):
     @abstractmethod
     def send(self, message: object) -> None:
         pass
 
 
-class FilesystemRadio(MonitoringRadio):
-    """A MonitoringRadio that sends messages over a shared filesystem.
+class FilesystemRadioSender(MonitoringRadioSender):
+    """A MonitoringRadioSender that sends messages over a shared filesystem.
 
     The messsage directory structure is based on maildir,
     https://en.wikipedia.org/wiki/Maildir
@@ -67,7 +67,7 @@ class FilesystemRadio(MonitoringRadio):
         os.rename(tmp_filename, new_filename)
 
 
-class HTEXRadio(MonitoringRadio):
+class HTEXRadioSender(MonitoringRadioSender):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -121,7 +121,7 @@ class HTEXRadio(MonitoringRadio):
         return
 
 
-class UDPRadio(MonitoringRadio):
+class UDPRadioSender(MonitoringRadioSender):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
