@@ -732,6 +732,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Joining on submit process")
         self.submit_process.join()
+        self.submit_process.close()
+
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
 

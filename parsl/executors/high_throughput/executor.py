@@ -555,6 +555,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
+            comm_q.close()
+            comm_q.join_thread()
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
@@ -829,6 +831,21 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Waiting for queue management thread exit")
         if self._queue_management_thread:
             self._queue_management_thread.join()
+
+        logger.info("closing context sockets")
+        # this might block if there are outstanding messages (eg if the interchange
+        # has gone away... probably something to do with zmq.LINGER sockopt to remove
+        # this hang risk?
+
+        # these should be initialized to none rather than being absent?
+        if hasattr(self, "incoming_q"):
+            self.incoming_q.close()
+
+        if hasattr(self, "outgoing_q"):
+            self.outgoing_q.close()
+
+        if hasattr(self, "command_client"):
+            self.command_client.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

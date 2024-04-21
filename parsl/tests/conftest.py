@@ -3,6 +3,7 @@ import itertools
 import logging
 import os
 import pathlib
+import psutil
 import random
 import re
 import shutil
@@ -228,6 +229,9 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
     config = pytestconfig.getoption('config')[0]
 
     if config == 'local':
+        this_process = psutil.Process()
+        start_fds = this_process.num_fds()
+        logger.error(f"BENC: open fds: {start_fds}")
         assert threading.active_count() == 1, "precondition: only one thread can be running before this test"
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
@@ -262,6 +266,12 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             parsl.clear()
 
         assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
+        end_fds = this_process.num_fds()
+        logger.error(f"BENC: open fds END: {end_fds}")
+        if end_fds > start_fds:
+            logger.error(f"Open files (not all fds, though?): {this_process.open_files()!r}")
+            os.system(f"ls -l /proc/{os.getpid()}/fd")
+            pytest.fail("BENC: number of open fds increased across test")
 
     else:
         yield

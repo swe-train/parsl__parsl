@@ -86,7 +86,7 @@ class DataFlowKernel:
         self.run_dir = make_rundir(config.run_dir)
 
         if config.initialize_logging:
-            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+            _, self.logging_handler = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
@@ -1272,7 +1272,13 @@ class DataFlowKernel:
             self.monitoring.close()
             logger.info("Terminated monitoring")
 
-        logger.info("DFK cleanup complete")
+        # TODO: do this in parsl/logutils.py
+        logger.info("DFK cleanup complete - removing parsl.log handler")
+        logger_to_remove = logging.getLogger("parsl")
+        logger_to_remove.removeHandler(self.logging_handler)
+        self.logging_handler.close()
+
+        logger.info("handler closed - is this going to break things?")
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
         """Checkpoint the dfk incrementally to a checkpoint file.

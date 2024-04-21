@@ -14,7 +14,7 @@ import io
 import logging
 import typeguard
 
-from typing import Optional
+from typing import Optional, Tuple
 
 
 DEFAULT_FORMAT = (
@@ -66,7 +66,7 @@ def set_stream_logger(name: str = 'parsl',
 def set_file_logger(filename: str,
                     name: str = 'parsl',
                     level: int = logging.DEBUG,
-                    format_string: Optional[str] = None) -> logging.Logger:
+                    format_string: Optional[str] = None) -> Tuple[logging.Logger, logging.FileHandler]:
     """Add a file log handler.
 
     Args:
@@ -94,4 +94,4 @@ def set_file_logger(filename: str,
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
 
-    return logger
+    return (logger, handler)
