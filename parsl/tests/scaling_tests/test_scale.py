@@ -16,7 +16,6 @@ from parsl.app.app import python_app  # , bash_app
 # from parsl.configs.local_ipp import config
 
 
-
 @python_app
 def double(x):
     return x * 2

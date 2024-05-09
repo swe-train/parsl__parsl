@@ -8,7 +8,6 @@ from parsl.configs.htex_local import config
 # from parsl.configs.local_threads import config
 
 
-
 @python_app
 def increment(x):
     return x + 1
