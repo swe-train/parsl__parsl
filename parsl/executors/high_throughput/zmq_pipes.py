@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import zmq
 import logging
 import threading
+
+import zmq
 
 from parsl import curvezmq
 
